@@ -2,10 +2,11 @@ import anyio
 import click
 import asyncio
 import uuid
+import os
 from datetime import datetime
 from langchain_openai import ChatOpenAI
 from browser_use import Agent
-from browser_use.browser.browser import Browser
+from browser_use.browser.browser import Browser, BrowserConfig
 import mcp.types as types
 from mcp.server.lowlevel import Server
 from dotenv import load_dotenv
@@ -31,7 +32,11 @@ config = BrowserContextConfig(
 )
 
 # Initialize browser and context
-browser = Browser()
+browser = Browser(
+    config=BrowserConfig(
+        chrome_instance_path=os.environ.get("CHROME_PATH"),
+    )
+)
 context = BrowserContext(browser=browser, config=config)
 
 # Initialize LLM
@@ -113,9 +118,9 @@ async def run_browser_task_async(task_id, url, action):
         if not await check_browser_health():
             task_store[task_id]["status"] = "failed"
             task_store[task_id]["end_time"] = datetime.now().isoformat()
-            task_store[task_id]["error"] = (
-                "Browser context is unhealthy and could not be reset"
-            )
+            task_store[task_id][
+                "error"
+            ] = "Browser context is unhealthy and could not be reset"
             return
 
         # Define step callback function with the correct signature
