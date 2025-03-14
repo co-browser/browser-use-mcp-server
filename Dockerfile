@@ -13,6 +13,7 @@ RUN apt-get update -y && \
 # Install Python before the project for caching
 RUN uv python install 3.13
 
+
 WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
@@ -35,8 +36,6 @@ RUN apt-get update && \
     tigervnc-tools \
     nodejs \
     npm \
-    chromium \
-    chromium-driver \
     fonts-freefont-ttf \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
@@ -56,8 +55,7 @@ COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH" \
     DISPLAY=:0 \
     CHROME_BIN=/usr/bin/chromium \
-    CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage" \
-    CHROME_PATH="/usr/bin/chromium"
+    CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
 
 # Combine VNC setup commands to reduce layers
 RUN mkdir -p ~/.vnc && \
@@ -67,6 +65,9 @@ RUN mkdir -p ~/.vnc && \
     chmod +x /root/.vnc/xstartup && \
     printf '#!/bin/bash\nvncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /root/.vnc/passwd :0\nproxy-login-automator\npython /app/server --port 8000' > /app/boot.sh && \
     chmod +x /app/boot.sh
+
+
+RUN playwright install --with-deps --no-shell chromium
 
 
 EXPOSE 8000

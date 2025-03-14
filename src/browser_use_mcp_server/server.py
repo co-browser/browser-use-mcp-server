@@ -123,36 +123,67 @@ async def reset_browser_context(context: BrowserContext) -> None:
     try:
         logger.info("Resetting browser context...")
 
-        # Since Browser doesn't have pages() or new_page() methods,
-        # we need to use the methods that are available
-
-        # Try to refresh the page if possible
+        # Check if browser is closed
         try:
-            # If the context has a current page, try to reload it
-            if hasattr(context, "current_page") and context.current_page:
-                await context.current_page.reload()
-                logger.info("Current page reloaded")
-
-            # Or navigate to a blank page to reset state
-            if hasattr(context, "navigate"):
-                await context.navigate("about:blank")
-                logger.info("Navigated to blank page")
-
-            # If we have access to create a new context, use that
-            if hasattr(context, "create_new_context"):
-                await context.create_new_context()
-                logger.info("Created new context")
-
-            # As a last resort, try to initialize a new context
-            if hasattr(context.browser, "initialize"):
-                await context.browser.initialize()
-                logger.info("Re-initialized browser")
+            # Try a simple operation to check if browser is still alive
+            if hasattr(context.browser, "new_context"):
+                await context.browser.new_context()
+                browser_context_healthy = True
+                logger.info("Browser context reset successfully")
+                return
         except Exception as e:
-            logger.warning(f"Error performing specific reset operations: {e}")
+            logger.warning(f"Browser context appears to be closed: {e}")
+            # Continue with reinitializing the browser
 
-        # Mark as healthy
-        browser_context_healthy = True
-        logger.info("Browser context reset successfully")
+        # If we get here, we need to reinitialize the browser
+        try:
+            # Get the original configuration from the context if possible
+            if hasattr(context, "config"):
+                pass
+
+            # Reinitialize the browser with the same configuration
+            browser_config = BrowserConfig(
+                chrome_path=os.environ.get("CHROME_PATH"),
+                extra_chromium_args=[
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    "--disable-software-rasterizer",
+                    "--disable-dev-shm-usage",
+                    "--remote-debugging-port=9222",
+                ],
+            )
+
+            # Create a new browser instance
+            browser = Browser(config=browser_config)
+            await browser.initialize()
+
+            # Create a new context with the same configuration as before
+            context_config = BrowserContextConfig(
+                wait_for_network_idle_page_load_time=0.6,
+                maximum_wait_page_load_time=1.2,
+                minimum_wait_page_load_time=0.2,
+                browser_window_size={"width": 1280, "height": 1100},
+                locale="en-US",
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36",
+                highlight_elements=True,
+                viewport_expansion=0,
+            )
+
+            # Replace the old browser with the new one
+            context.browser = browser
+            context.config = context_config
+
+            # Create a new browser context
+            await context.browser.new_context(context_config)
+
+            logger.info("Browser reinitialized successfully")
+            browser_context_healthy = True
+            return
+        except Exception as e:
+            logger.error(f"Failed to reinitialize browser: {e}")
+            browser_context_healthy = False
+            raise
+
     except Exception as e:
         browser_context_healthy = False
         logger.error(f"Failed to reset browser context: {e}")
@@ -172,25 +203,38 @@ async def check_browser_health(context: BrowserContext) -> bool:
     """
     global browser_context_healthy
 
-    # Debug: Log available methods and attributes
-    try:
-        context_methods = [
-            method for method in dir(context) if not method.startswith("_")
-        ]
-        logger.info(f"BrowserContext available methods: {context_methods}")
-
-        if hasattr(context, "browser"):
-            browser_methods = [
-                method for method in dir(context.browser) if not method.startswith("_")
-            ]
-            logger.info(f"Browser available methods: {browser_methods}")
-    except Exception as e:
-        logger.warning(f"Error logging available methods: {e}")
-
+    # First, check if the browser context is already marked as unhealthy
     if not browser_context_healthy:
         logger.info("Browser context marked as unhealthy, attempting reset...")
         try:
             await reset_browser_context(context)
+            logger.info("Browser context successfully reset")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to recover browser context: {e}")
+            return False
+
+    # Try a simple operation to check if browser is still alive
+    try:
+        # Check if browser is still responsive
+        if hasattr(context.browser, "new_context"):
+            # Just check if the method exists, don't actually call it
+            browser_context_healthy = True
+            logger.debug("Browser context appears healthy")
+        else:
+            # If the method doesn't exist, mark as unhealthy
+            logger.warning("Browser context missing expected methods")
+            browser_context_healthy = False
+    except Exception as e:
+        logger.warning(f"Error checking browser health: {e}")
+        browser_context_healthy = False
+
+    # If marked as unhealthy, try to reset
+    if not browser_context_healthy:
+        logger.info("Browser context appears unhealthy, attempting reset...")
+        try:
+            await reset_browser_context(context)
+            logger.info("Browser context successfully reset")
             return True
         except Exception as e:
             logger.error(f"Failed to recover browser context: {e}")
@@ -211,6 +255,7 @@ async def run_browser_task_async(
     ] = None,
     done_callback: Optional[Callable[[Dict[str, Any]], Awaitable[None]]] = None,
     task_expiry_minutes: int = 60,
+    max_retries: int = 1,
 ) -> str:
     """
     Run a browser task asynchronously.
@@ -225,6 +270,7 @@ async def run_browser_task_async(
         step_callback: Optional callback for each step of the task
         done_callback: Optional callback for when the task is complete
         task_expiry_minutes: Minutes after which the task is considered expired
+        max_retries: Maximum number of retries if the task fails due to browser issues
 
     Returns:
         Task ID
@@ -269,155 +315,113 @@ async def run_browser_task_async(
     step_cb = step_callback if step_callback is not None else default_step_callback
     done_cb = done_callback if done_callback is not None else default_done_callback
 
-    try:
-        # Check and ensure browser health
-        browser_healthy = await check_browser_health(context)
-        if not browser_healthy:
-            raise Exception("Browser context is unhealthy")
-
-        # Create agent and run task
+    retries = 0
+    while retries <= max_retries:
         try:
-            # Inspect Agent class initialization parameters
-            agent_params = inspect.signature(Agent.__init__).parameters
-            logger.info(f"Agent init parameters: {list(agent_params.keys())}")
+            # Check and ensure browser health
+            browser_healthy = await check_browser_health(context)
+            if not browser_healthy:
+                raise Exception("Browser context is unhealthy")
 
-            # Adapt initialization based on available parameters
-            agent_kwargs = {"context": context}
-
-            if "llm" in agent_params:
-                agent_kwargs["llm"] = llm
-
-            # Add task parameter which is required based on the error message
-            if "task" in agent_params:
-                # Create a task that combines navigation and the action
-                task_description = f"First, navigate to {url}. Then, {action}"
-                agent_kwargs["task"] = task_description
-
-            # Add browser and browser_context parameters if they're required
-            if "browser" in agent_params:
-                agent_kwargs["browser"] = context.browser
-            if "browser_context" in agent_params:
-                agent_kwargs["browser_context"] = context
-
-            # Check for callbacks
-            if "step_callback" in agent_params:
-                agent_kwargs["step_callback"] = step_cb
-            if "done_callback" in agent_params:
-                agent_kwargs["done_callback"] = done_cb
-
-            # Register callbacks with the new parameter names if the old ones don't exist
-            if (
-                "step_callback" not in agent_params
-                and "register_new_step_callback" in agent_params
-            ):
-                agent_kwargs["register_new_step_callback"] = step_cb
-            if (
-                "done_callback" not in agent_params
-                and "register_done_callback" in agent_params
-            ):
-                agent_kwargs["register_done_callback"] = done_cb
-
-            # Check if all required parameters are set
-            missing_params = []
-            for param_name, param in agent_params.items():
-                if (
-                    param.default == inspect.Parameter.empty
-                    and param_name != "self"
-                    and param_name not in agent_kwargs
-                ):
-                    missing_params.append(param_name)
-
-            if missing_params:
-                logger.error(f"Missing required parameters for Agent: {missing_params}")
-                raise Exception(
-                    f"Missing required parameters for Agent: {missing_params}"
-                )
-
-            # Create agent with appropriate parameters
-            agent = Agent(**agent_kwargs)
-
-            # Launch task asynchronously
-            # Don't pass any parameters to run() as they should already be set via init
-            asyncio.create_task(agent.run())
-            return task_id
-        except Exception as agent_error:
-            logger.error(f"Error creating Agent: {str(agent_error)}")
-            raise Exception(f"Failed to create browser agent: {str(agent_error)}")
-
-    except Exception as e:
-        # Update task store with error
-        store[task_id]["status"] = "error"
-        store[task_id]["error"] = str(e)
-        store[task_id]["end_time"] = datetime.now().isoformat()
-        logger.error(f"Task {task_id}: Error - {str(e)}")
-
-        # Attempt one more browser reset as a last resort
-        if "Browser context is unhealthy" in str(e):
+            # Create agent and run task
             try:
-                logger.info(
-                    f"Task {task_id}: Final attempt to reset browser context..."
-                )
+                # Inspect Agent class initialization parameters
+                agent_params = inspect.signature(Agent.__init__).parameters
+                logger.info(f"Agent init parameters: {list(agent_params.keys())}")
 
-                # Use a simpler recovery approach
-                try:
-                    # Try to use any available method to reset the context
-                    if hasattr(context, "current_page") and context.current_page:
-                        await context.current_page.reload()
-                        logger.info(f"Task {task_id}: Current page reloaded")
+                # Adapt initialization based on available parameters
+                agent_kwargs = {"context": context}
 
-                    if hasattr(context, "navigate"):
-                        await context.navigate("about:blank")
-                        logger.info(f"Task {task_id}: Navigated to blank page")
+                if "llm" in agent_params:
+                    agent_kwargs["llm"] = llm
 
-                    # Mark as healthy and retry
-                    global browser_context_healthy
-                    browser_context_healthy = True
-                    logger.info(
-                        f"Task {task_id}: Browser context recovered, retrying..."
+                # Add task parameter which is required based on the error message
+                if "task" in agent_params:
+                    # Create a task that combines navigation and the action
+                    task_description = f"First, navigate to {url}. Then, {action}"
+                    agent_kwargs["task"] = task_description
+
+                # Add browser and browser_context parameters if they're required
+                if "browser" in agent_params:
+                    agent_kwargs["browser"] = context.browser
+                if "browser_context" in agent_params:
+                    agent_kwargs["browser_context"] = context
+
+                # Check for callbacks
+                if "step_callback" in agent_params:
+                    agent_kwargs["step_callback"] = step_cb
+                if "done_callback" in agent_params:
+                    agent_kwargs["done_callback"] = done_cb
+
+                # Register callbacks with the new parameter names if the old ones don't exist
+                if (
+                    "step_callback" not in agent_params
+                    and "register_new_step_callback" in agent_params
+                ):
+                    agent_kwargs["register_new_step_callback"] = step_cb
+                if (
+                    "done_callback" not in agent_params
+                    and "register_done_callback" in agent_params
+                ):
+                    agent_kwargs["register_done_callback"] = done_cb
+
+                # Check if all required parameters are set
+                missing_params = []
+                for param_name, param in agent_params.items():
+                    if (
+                        param.default == inspect.Parameter.empty
+                        and param_name != "self"
+                        and param_name not in agent_kwargs
+                    ):
+                        missing_params.append(param_name)
+
+                if missing_params:
+                    logger.error(
+                        f"Missing required parameters for Agent: {missing_params}"
+                    )
+                    raise Exception(
+                        f"Missing required parameters for Agent: {missing_params}"
                     )
 
-                    # Retry the task
-                    try:
-                        # Use the same dynamic approach for agent initialization
-                        agent_kwargs = {"context": context}
+                # Create agent with appropriate parameters
+                agent = Agent(**agent_kwargs)
 
-                        if "llm" in inspect.signature(Agent.__init__).parameters:
-                            agent_kwargs["llm"] = llm
+                # Launch task asynchronously
+                # Don't pass any parameters to run() as they should already be set via init
+                asyncio.create_task(agent.run())
+                return task_id
+            except Exception as agent_error:
+                logger.error(f"Error creating Agent: {str(agent_error)}")
+                raise Exception(f"Failed to create browser agent: {str(agent_error)}")
 
-                        # Check for callbacks
-                        if (
-                            "step_callback"
-                            in inspect.signature(Agent.__init__).parameters
-                        ):
-                            agent_kwargs["step_callback"] = step_cb
-                        if (
-                            "done_callback"
-                            in inspect.signature(Agent.__init__).parameters
-                        ):
-                            agent_kwargs["done_callback"] = done_cb
+        except Exception as e:
+            # Update task store with error
+            store[task_id]["error"] = str(e)
+            logger.error(f"Task {task_id}: Error - {str(e)}")
 
-                        # Create agent with appropriate parameters
-                        agent = Agent(**agent_kwargs)
+            # If we've reached max retries, mark as error and exit
+            if retries >= max_retries:
+                store[task_id]["status"] = "error"
+                store[task_id]["end_time"] = datetime.now().isoformat()
+                logger.error(f"Task {task_id}: Failed after {retries + 1} attempts")
+                raise
 
-                        # Launch task asynchronously
-                        asyncio.create_task(agent.run())
-                        store[task_id]["status"] = "running"
-                        store[task_id]["error"] = None
-                        return task_id
-                    except Exception as agent_error:
-                        logger.error(
-                            f"Task {task_id}: Error creating Agent during retry: {str(agent_error)}"
-                        )
-                        raise
-                except Exception as retry_error:
-                    logger.error(f"Task {task_id}: Retry failed - {str(retry_error)}")
+            # Otherwise, try to reset the browser context and retry
+            retries += 1
+            logger.info(f"Task {task_id}: Retry attempt {retries}/{max_retries}")
+
+            try:
+                # Reset browser context before retrying
+                await reset_browser_context(context)
+                logger.info(f"Task {task_id}: Browser context reset for retry")
             except Exception as reset_error:
                 logger.error(
-                    f"Task {task_id}: Final reset attempt failed - {str(reset_error)}"
+                    f"Task {task_id}: Failed to reset browser context: {str(reset_error)}"
                 )
+                # Continue with retry even if reset fails
 
-        # Re-raise the exception
-        raise
+    # This should never be reached due to the raise in the loop
+    return task_id
 
 
 def create_mcp_server(
@@ -506,6 +510,130 @@ def create_mcp_server(
                     )
                 ]
 
+        elif name == "mcp__browser_use":
+            # Validate required arguments
+            if "url" not in arguments:
+                logger.error("URL argument missing in browser_use call")
+                return [types.TextContent(type="text", text="Error: URL is required")]
+
+            if "action" not in arguments:
+                logger.error("Action argument missing in browser_use call")
+                return [
+                    types.TextContent(type="text", text="Error: Action is required")
+                ]
+
+            url = arguments["url"]
+            action = arguments["action"]
+
+            logger.info(f"Browser use request to URL: {url} with action: {action}")
+
+            # Generate unique task ID
+            task_id = str(uuid.uuid4())
+
+            try:
+                # Run browser task
+                await run_browser_task_async(
+                    context=context,
+                    llm=llm,
+                    task_id=task_id,
+                    url=url,
+                    action=action,
+                    custom_task_store=store,
+                    task_expiry_minutes=task_expiry_minutes,
+                )
+
+                logger.info(f"Browser task {task_id} started successfully")
+
+                # Return task ID for async execution
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"Task {task_id} started. Use mcp__browser_get_result with this task ID to get results when complete.",
+                    )
+                ]
+
+            except Exception as e:
+                logger.error(f"Error executing browser task: {str(e)}")
+                return [
+                    types.TextContent(
+                        type="text", text=f"Error executing browser task: {str(e)}"
+                    )
+                ]
+
+        elif name == "mcp__browser_get_result":
+            # Validate required arguments
+            if "task_id" not in arguments:
+                logger.error("Task ID argument missing in browser_get_result call")
+                return [
+                    types.TextContent(type="text", text="Error: Task ID is required")
+                ]
+
+            task_id = arguments["task_id"]
+            logger.info(f"Result request for task: {task_id}")
+
+            # Check if task exists
+            if task_id not in store:
+                return [
+                    types.TextContent(
+                        type="text", text=f"Error: Task {task_id} not found"
+                    )
+                ]
+
+            task = store[task_id]
+
+            # Check task status
+            if task["status"] == "error":
+                return [types.TextContent(type="text", text=f"Error: {task['error']}")]
+
+            if task["status"] == "running":
+                # For running tasks, return the steps completed so far
+                steps_text = "\n".join(
+                    [
+                        f"Step {s['step']}: {s['agent_output'].get('action', 'Unknown action')}"
+                        for s in task["steps"]
+                    ]
+                )
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"Task {task_id} is still running.\n\nSteps completed so far:\n{steps_text}",
+                    )
+                ]
+
+            # For completed tasks, return the full result
+            if task["result"]:
+                # Format the result as text
+                result_text = "Task completed successfully.\n\n"
+                result_text += f"URL: {task['url']}\n\n"
+                result_text += f"Action: {task['action']}\n\n"
+
+                # Add final result if available
+                if isinstance(task["result"], dict) and "text" in task["result"]:
+                    result_text += f"Result: {task['result']['text']}\n\n"
+                elif isinstance(task["result"], str):
+                    result_text += f"Result: {task['result']}\n\n"
+                else:
+                    # Try to extract result from the last step
+                    if task["steps"] and task["steps"][-1].get("agent_output"):
+                        last_output = task["steps"][-1]["agent_output"]
+                        if "done" in last_output and "text" in last_output["done"]:
+                            result_text += f"Result: {last_output['done']['text']}\n\n"
+
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=result_text,
+                    )
+                ]
+
+            # Fallback for unexpected cases
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"Task {task_id} completed with status '{task['status']}' but no results are available.",
+                )
+            ]
+
         elif name == "mcp__browser_health":
             try:
                 # Check browser health
@@ -562,7 +690,7 @@ def create_mcp_server(
             tools = [
                 types.Tool(
                     name="mcp__browser_navigate",
-                    description="Navigate to a URL and perform an action",
+                    description="Navigate to a URL and perform an action. This is a synchronous operation that will return when the task is complete.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -579,31 +707,53 @@ def create_mcp_server(
                     },
                 ),
                 types.Tool(
-                    name="mcp__browser_health",
-                    description="Check browser health status",
+                    name="mcp__browser_use",
+                    description="Performs a browser action asynchronously and returns a task ID. Use mcp__browser_get_result with the returned task ID to check the status and get results.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "random_string": {
+                            "url": {
                                 "type": "string",
-                                "description": "Dummy parameter for no-parameter tools",
+                                "description": "URL to navigate to",
+                            },
+                            "action": {
+                                "type": "string",
+                                "description": "Action to perform in the browser (e.g., 'Extract all headlines', 'Search for X')",
                             },
                         },
-                        "required": ["random_string"],
+                        "required": ["url", "action"],
+                    },
+                ),
+                types.Tool(
+                    name="mcp__browser_get_result",
+                    description="Gets the result of an asynchronous browser task. Use this to check the status of a task started with mcp__browser_use.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "task_id": {
+                                "type": "string",
+                                "description": "ID of the task to get results for",
+                            },
+                        },
+                        "required": ["task_id"],
+                    },
+                ),
+                types.Tool(
+                    name="mcp__browser_health",
+                    description="Check browser health status and attempt recovery if needed",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
                     },
                 ),
                 types.Tool(
                     name="mcp__browser_reset",
-                    description="Reset browser context",
+                    description="Force reset of the browser context to recover from errors",
                     inputSchema={
                         "type": "object",
-                        "properties": {
-                            "random_string": {
-                                "type": "string",
-                                "description": "Dummy parameter for no-parameter tools",
-                            },
-                        },
-                        "required": ["random_string"],
+                        "properties": {},
+                        "required": [],
                     },
                 ),
             ]
