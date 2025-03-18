@@ -11,19 +11,25 @@
 
 ## Code of Conduct
 
-This project follows a respectful and inclusive environment. By contributing, you agree to maintain a welcoming atmosphere. Any unacceptable behavior should be reported directly to the maintainers.
+This project follows a respectful and inclusive environment. By contributing,
+you agree to maintain a welcoming atmosphere. Any unacceptable behavior should
+be reported directly to the maintainers.
 
 ## How to Contribute
 
 ### Guidelines for Non-Code Contributions
 
-We appreciate your attention to detail. However, minor fixes like typos or grammar corrections should not be submitted individually. Instead, create an issue noting these corrections, and we'll batch them into larger updates.
+We appreciate your attention to detail. However, minor fixes like typos or
+grammar corrections should not be submitted individually. Instead, create an
+issue noting these corrections, and we'll batch them into larger updates.
 
 ### Reporting Bugs
 
 #### Before Submitting a Bug
 
-- Search existing [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to ensure it hasn't already been reported.
+- Search existing
+  [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to
+  ensure it hasn't already been reported.
 
 #### How to Submit a Good Bug Report
 
@@ -39,7 +45,9 @@ We appreciate your attention to detail. However, minor fixes like typos or gramm
 
 #### Before Submitting an Enhancement
 
-- Search existing [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to avoid duplicates.
+- Search existing
+  [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to avoid
+  duplicates.
 
 #### How to Submit a Good Enhancement Suggestion
 
@@ -51,9 +59,12 @@ We appreciate your attention to detail. However, minor fixes like typos or gramm
 
 ### Pull Requests
 
-- Pull requests undergo automated checks, including build and linting. Ensure these checks pass.
+- Pull requests undergo automated checks, including build and linting. Ensure
+  these checks pass.
 - Ensure your PR addresses the following:
   - Clearly described purpose and benefits.
   - Consistent code style and formatting.
-- Clearly document commit messages, providing detailed context for substantial changes.
-- PRs focused solely on formatting without functional improvements will generally be rejected.
+- Clearly document commit messages, providing detailed context for substantial
+  changes.
+- PRs focused solely on formatting without functional improvements will
+  generally be rejected.
