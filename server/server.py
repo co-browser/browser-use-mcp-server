@@ -409,7 +409,7 @@ def create_mcp_server(
             }
 
             # Start task in background
-            asyncio.create_task(
+            _task = asyncio.create_task(
                 run_browser_task_async(
                     task_id=task_id,
                     url=arguments["url"],
@@ -421,9 +421,11 @@ def create_mcp_server(
                 )
             )
 
+            # If PATIENT is set, wait for the task to complete
+            if os.environ.get("PATIENT", None) == "true":
+                await _task
+
             # Return task ID immediately with explicit sleep instruction
-            if _sleep_interval := int(os.environ.get("SLEEP_INTERVAL", 0)):
-                await asyncio.sleep(_sleep_interval)
             return [
                 types.TextContent(
                     type="text",
@@ -461,6 +463,7 @@ def create_mcp_server(
                 ]
 
             # Get the current task data
+            await _sleepy()
             task_data = task_store[task_id].copy()
 
             # If task is still running, add simple guidance
