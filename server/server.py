@@ -422,6 +422,8 @@ def create_mcp_server(
             )
 
             # Return task ID immediately with explicit sleep instruction
+            if (_sleep_interval := int(os.environ.get("SLEEP_INTERVAL", 0))):
+                await asyncio.sleep(_sleep_interval)
             return [
                 types.TextContent(
                     type="text",
