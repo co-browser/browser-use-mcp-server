@@ -463,7 +463,6 @@ def create_mcp_server(
                 ]
 
             # Get the current task data
-            await _sleepy()
             task_data = task_store[task_id].copy()
 
             # If task is still running, add simple guidance
