@@ -44,6 +44,7 @@ uv run server --stdio
 ```
 OPENAI_API_KEY=[your api key]
 CHROME_PATH=[only change this if you have a custom chrome build]
+PATIENT=false # Set to true if you want api calls to wait for tasks to complete (default is false)
 ```
 
 When building the docker image, you can use Docker secrets for VNC password:
