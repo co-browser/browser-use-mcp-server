@@ -73,3 +73,6 @@ browser-use-mcp-server = "browser_use_mcp_server.cli:cli"
 
 [tool.hatch.build]
 packages = ["src/browser_use_mcp_server"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/browser_use_mcp_server"]

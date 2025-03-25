@@ -1,23 +1,42 @@
 # ➡️ browser-use mcp server
 
-[browser-use](https://github.com/browser-use/browser-use) MCP Server with SSE
-transport
+[![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/cobrowser.svg?style=social&label=Follow%20%40cobrowser)](https://x.com/cobrowser)
+[![PyPI version](https://badge.fury.io/py/browser-use-mcp-server.svg)](https://pypi.org/project/browser-use-mcp-server/)
 
-### requirements
+[browser-use](https://github.com/browser-use/browser-use) MCP Server with SSE +
+stdio transport
 
-- uv
+### Requirements
+
+- [uv](https://github.com/astral-sh/uv)
+- [mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) (for stdio)
 
 ```
+# 1. Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
+# 2. Install mcp-proxy pypi package via uv
+uv tool install mcp-proxy
 ```
 
-### quickstart
+### Quickstart
 
-```
+Starting in SSE mode:
+
+```bash
 uv sync
 uv pip install playwright
 uv run playwright install --with-deps --no-shell chromium
 uv run server --port 8000
+```
+
+With stdio mode:
+
+```bash
+# Run with stdio mode and specify a proxy port
+uv run server --stdio --proxy-port 8001
+
+# Or just stdio mode (random proxy port)
+uv run server --stdio
 ```
 
 - the .env requires the following:
@@ -27,12 +46,9 @@ OPENAI_API_KEY=[your api key]
 CHROME_PATH=[only change this if you have a custom chrome build]
 ```
 
-- we will be adding support for other LLM providers to power browser-use
-  (claude, grok, bedrock, etc)
+When building the docker image, you can use Docker secrets for VNC password:
 
-when building the docker image, you can use Docker secrets for VNC password:
-
-```
+```bash
 # With Docker secrets (recommended for production)
 echo "your-secure-password" > vnc_password.txt
 docker run -v $(pwd)/vnc_password.txt:/run/secrets/vnc_password your-image-name
@@ -41,9 +57,10 @@ docker run -v $(pwd)/vnc_password.txt:/run/secrets/vnc_password your-image-name
 docker build .
 ```
 
-### tools
+### Tools
 
 - [x] SSE transport
+- [x] stdio transport (via mcp-proxy)
 - [x] browser_use - Initiates browser tasks with URL and action
 - [x] browser_get_result - Retrieves results of async browser tasks
 - [x] VNC server - stream the dockerized browser to your client
@@ -67,18 +84,18 @@ cd noVNC
 <img width="428" alt="Screenshot 2025-03-24 at 12 11 42 PM" src="https://github.com/user-attachments/assets/7db53f41-fc00-4e48-8892-f7108096f9c4" />
 </p>
 
-### supported clients
+### Supported Clients
 
 - cursor.ai
 - claude desktop
 - claude code
-- <s>windsurf</s> ([windsurf](https://codeium.com/windsurf) doesn't support SSE
-  yet)
+- windsurf ([windsurf](https://codeium.com/windsurf) doesn't support SSE, only
+  stdio)
 
-### usage
+#### SSE Mode
 
-after running the server, add http://localhost:8000/sse to your client UI, or in
-a mcp.json file:
+After running the server in SSE mode, add http://localhost:8000/sse to your
+client UI, or in a mcp.json file:
 
 ```json
 {
@@ -90,28 +107,66 @@ a mcp.json file:
 }
 ```
 
-#### cursor
+#### stdio Mode
+
+When running in stdio mode, the server will automatically start both the SSE
+server and mcp-proxy. The proxy handles the conversion between stdio and SSE
+protocols. No additional configuration is needed - just start your client and it
+will communicate with the server through stdin/stdout.
+
+Install the cli
+
+```bash
+uv pip install -e .
+```
+
+And then e.g., in Windsurf, paste:
+
+```json
+{
+  "mcpServers": {
+    "browser-server": {
+      "command": "browser-use-mcp-server",
+      "args": [
+        "run",
+        "server",
+        "--port",
+        "8000",
+        "--stdio",
+        "--proxy-port",
+        "9000"
+      ]
+    }
+  }
+}
+```
+
+### Client Configuration Paths
+
+#### Cursor
 
 - `./.cursor/mcp.json`
 
-#### windsurf
+#### Windsurf
 
 - `~/.codeium/windsurf/mcp_config.json`
 
-#### claude
+#### Claude
 
 - `~/Library/Application Support/Claude/claude_desktop_config.json`
 - `%APPDATA%\Claude\claude_desktop_config.json`
 
-then try asking your LLM the following:
+### Example Usage
+
+Try asking your LLM the following:
 
 `open https://news.ycombinator.com and return the top ranked article`
 
-### help
+### Help
 
 for issues or interest reach out @ https://cobrowser.xyz
 
-# stars
+# Stars
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=co-browser/browser-use-mcp-server&type=Date&theme=dark" />
