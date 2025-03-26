@@ -1,6 +1,8 @@
 # Contributing to browser-use MCP Server
 
-First off, thank you for considering contributing to browser-use MCP Server! This project is released under the MIT License, which means your contributions will also be covered under the same permissive license.
+First off, thank you for considering contributing to browser-use MCP Server!
+This project is released under the MIT License, which means your contributions
+will also be covered under the same permissive license.
 
 ### Table of Contents
 
@@ -16,26 +18,33 @@ First off, thank you for considering contributing to browser-use MCP Server! Thi
 
 ## Code of Conduct
 
-We have adopted a Code of Conduct that we expect project participants to adhere to. Please read [the full text](CODE_OF_CONDUCT.md) so that you can understand what actions will and will not be tolerated.
+We have adopted a Code of Conduct that we expect project participants to adhere
+to. Please read [the full text](CODE_OF_CONDUCT.md) so that you can understand
+what actions will and will not be tolerated.
 
 ## Getting Started
 
 ### Fork-based workflow (recommended as a playground)
+
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/browser-use-mcp-server.git`
+2. Clone your fork:
+   `git clone https://github.com/your-username/browser-use-mcp-server.git`
 3. Create a new branch: `git checkout -b feature/your-feature-name`
 4. Make your changes
 5. Push to your fork: `git push origin feature/your-feature-name`
 6. Open a Pull Request
 
 ### Direct repository workflow (for contributors)
-1. Clone the repository directly: `git clone https://github.com/co-browser/browser-use-mcp-server.git`
+
+1. Clone the repository directly:
+   `git clone https://github.com/co-browser/browser-use-mcp-server.git`
 2. Create a new branch: `git checkout -b feature/your-feature-name`
 3. Make your changes
 4. Push to the repository: `git push origin feature/your-feature-name`
 5. Open a Pull Request
 
-If you're interested in being contributor, please reach out to the maintainers after making a few successful contributions via issues and pull requests.
+If you're interested in being contributor, please reach out to the maintainers
+after making a few successful contributions via issues and pull requests.
 
 ## How to Contribute
 
@@ -49,14 +58,19 @@ issue noting these corrections, and we'll batch them into larger updates.
 
 We use GitHub issues to track bugs. Before creating a bug report:
 
-- Search existing [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to ensure it hasn't already been reported
-- If you find a closed issue that seems to address your problem, open a new issue and include a link to the original
+- Search existing
+  [Issues](https://github.com/co-browser/browser-use-mcp-server/issues) to
+  ensure it hasn't already been reported
+- If you find a closed issue that seems to address your problem, open a new
+  issue and include a link to the original
 
-When submitting a bug report, please use our bug report template and include as much detail as possible.
+When submitting a bug report, please use our bug report template and include as
+much detail as possible.
 
 ### Suggesting Enhancements
 
-Enhancement suggestions are tracked through GitHub issues. Please use our feature request template when suggesting enhancements.
+Enhancement suggestions are tracked through GitHub issues. Please use our
+feature request template when suggesting enhancements.
 
 ### Pull Requests
 
@@ -81,4 +95,5 @@ Enhancement suggestions are tracked through GitHub issues. Please use our featur
 
 ## License
 
-By contributing to browser-use MCP Server, you agree that your contributions will be licensed under the MIT License. See [LICENSE](LICENSE) for details.
+By contributing to browser-use MCP Server, you agree that your contributions
+will be licensed under the MIT License. See [LICENSE](LICENSE) for details.
