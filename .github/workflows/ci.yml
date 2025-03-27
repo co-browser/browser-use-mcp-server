@@ -87,12 +87,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.COBROWSER_PACKAGE_USER }}
-          password: ${{ secrets.COBROWSER_PACKAGE_TOKEN }}
+      - name: Log in to registry
+        run: echo "${{ secrets.COBROWSER_PACKAGE_TOKEN }}" | docker login ghcr.io -u ${{ secrets.COBROWSER_PACKAGE_USER }} --password-stdin
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
