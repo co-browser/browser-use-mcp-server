@@ -79,7 +79,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write
+      # packages: write
       # attestations: write
       id-token: write
 
@@ -92,7 +92,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.COBROWSER_PACKAGE_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
