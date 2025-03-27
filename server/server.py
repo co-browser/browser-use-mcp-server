@@ -45,7 +45,26 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
-def init_configuration() -> Dict[str, any]:
+def parse_bool_env(env_var: str, default: bool = False) -> bool:
+    """
+    Parse a boolean environment variable.
+
+    Args:
+        env_var: The environment variable name
+        default: Default value if not set
+
+    Returns:
+        Boolean value of the environment variable
+    """
+    value = os.environ.get(env_var)
+    if value is None:
+        return default
+
+    # Consider various representations of boolean values
+    return value.lower() in ("true", "yes", "1", "y", "on")
+
+
+def init_configuration() -> Dict[str, Any]:
     """
     Initialize configuration from environment variables with defaults.
 
@@ -79,6 +98,8 @@ def init_configuration() -> Dict[str, any]:
             "--disable-dev-shm-usage",
             "--remote-debugging-port=0",  # Use random port to avoid conflicts
         ],
+        # Patient mode - if true, functions wait for task completion before returning
+        "PATIENT_MODE": parse_bool_env("PATIENT", False),
     }
 
     return config
@@ -163,6 +184,9 @@ async def run_browser_task_async(
 
     This function executes a browser automation task with the given URL and action,
     and updates the task store with progress and results.
+
+    When PATIENT_MODE is enabled, the calling function will wait for this function
+    to complete before returning to the client.
 
     Args:
         task_id: Unique identifier for the task
@@ -383,7 +407,9 @@ def create_mcp_server(
             arguments: The arguments to pass to the tool
 
         Returns:
-            A list of content objects to return to the client
+            A list of content objects to return to the client.
+            When PATIENT_MODE is enabled, the browser_use tool will wait for the task to complete
+            and return the full result immediately instead of just the task ID.
 
         Raises:
             ValueError: If required arguments are missing
@@ -422,8 +448,36 @@ def create_mcp_server(
             )
 
             # If PATIENT is set, wait for the task to complete
-            if os.environ.get("PATIENT", None) == "true":
-                await _task
+            if CONFIG["PATIENT_MODE"]:
+                try:
+                    await _task
+                    # Return the completed task result instead of just the ID
+                    task_data = task_store[task_id]
+                    if task_data["status"] == "failed":
+                        logger.error(
+                            f"Task {task_id} failed: {task_data.get('error', 'Unknown error')}"
+                        )
+                    return [
+                        types.TextContent(
+                            type="text",
+                            text=json.dumps(task_data, indent=2),
+                        )
+                    ]
+                except Exception as e:
+                    logger.error(f"Error in patient mode execution: {str(e)}")
+                    traceback_str = traceback.format_exc()
+                    # Update task store with error
+                    task_store[task_id]["status"] = "failed"
+                    task_store[task_id]["error"] = str(e)
+                    task_store[task_id]["traceback"] = traceback_str
+                    task_store[task_id]["end_time"] = datetime.now().isoformat()
+                    # Return error information
+                    return [
+                        types.TextContent(
+                            type="text",
+                            text=json.dumps(task_store[task_id], indent=2),
+                        )
+                    ]
 
             # Return task ID immediately with explicit sleep instruction
             return [
@@ -502,43 +556,85 @@ def create_mcp_server(
         """
         List the available tools for the MCP client.
 
+        Returns different tool descriptions based on the PATIENT_MODE configuration.
+        When PATIENT_MODE is enabled, the browser_use tool description indicates it returns
+        complete results directly. When disabled, it indicates async operation.
+
         Returns:
-            A list of tool definitions
+            A list of tool definitions appropriate for the current configuration
         """
-        return [
-            types.Tool(
-                name="browser_use",
-                description="Performs a browser action and returns a task ID for async execution",
-                inputSchema={
-                    "type": "object",
-                    "required": ["url", "action"],
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "URL to navigate to",
-                        },
-                        "action": {
-                            "type": "string",
-                            "description": "Action to perform in the browser",
+        patient_mode = CONFIG["PATIENT_MODE"]
+
+        if patient_mode:
+            return [
+                types.Tool(
+                    name="browser_use",
+                    description="Performs a browser action and returns the complete result directly (patient mode active)",
+                    inputSchema={
+                        "type": "object",
+                        "required": ["url", "action"],
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "URL to navigate to",
+                            },
+                            "action": {
+                                "type": "string",
+                                "description": "Action to perform in the browser",
+                            },
                         },
                     },
-                },
-            ),
-            types.Tool(
-                name="browser_get_result",
-                description="Gets the result of an asynchronous browser task",
-                inputSchema={
-                    "type": "object",
-                    "required": ["task_id"],
-                    "properties": {
-                        "task_id": {
-                            "type": "string",
-                            "description": "ID of the task to get results for",
-                        }
+                ),
+                types.Tool(
+                    name="browser_get_result",
+                    description="Gets the result of an asynchronous browser task (not needed in patient mode as browser_use returns complete results directly)",
+                    inputSchema={
+                        "type": "object",
+                        "required": ["task_id"],
+                        "properties": {
+                            "task_id": {
+                                "type": "string",
+                                "description": "ID of the task to get results for",
+                            }
+                        },
                     },
-                },
-            ),
-        ]
+                ),
+            ]
+        else:
+            return [
+                types.Tool(
+                    name="browser_use",
+                    description="Performs a browser action and returns a task ID for async execution",
+                    inputSchema={
+                        "type": "object",
+                        "required": ["url", "action"],
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "URL to navigate to",
+                            },
+                            "action": {
+                                "type": "string",
+                                "description": "Action to perform in the browser",
+                            },
+                        },
+                    },
+                ),
+                types.Tool(
+                    name="browser_get_result",
+                    description="Gets the result of an asynchronous browser task",
+                    inputSchema={
+                        "type": "object",
+                        "required": ["task_id"],
+                        "properties": {
+                            "task_id": {
+                                "type": "string",
+                                "description": "ID of the task to get results for",
+                            }
+                        },
+                    },
+                ),
+            ]
 
     @app.list_resources()
     async def list_resources() -> list[types.Resource]:
