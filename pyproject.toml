@@ -72,7 +72,8 @@ disallow_incomplete_defs = true
 browser-use-mcp-server = "browser_use_mcp_server.cli:cli"
 
 [tool.hatch.build]
-packages = ["src/browser_use_mcp_server"]
+packages = ["src", "server"]
+include = ["server"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/browser_use_mcp_server"]
+packages = ["src/browser_use_mcp_server", "server"]
