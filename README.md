@@ -44,6 +44,7 @@ uv run server --stdio
 ```
 OPENAI_API_KEY=[your api key]
 CHROME_PATH=[only change this if you have a custom chrome build]
+PATIENT=false # Set to true if you want api calls to wait for tasks to complete (default is false)
 ```
 
 When building the docker image, you can use Docker secrets for VNC password:
@@ -55,6 +56,41 @@ docker run -v $(pwd)/vnc_password.txt:/run/secrets/vnc_password your-image-name
 
 # Or during development with the default password
 docker build .
+```
+
+### Local Development and Testing
+
+To develop and test the package locally:
+
+1. Build a distributable wheel:
+
+```bash
+# From the project root directory
+uv build
+```
+
+2. Install it as a global tool using the built wheel:
+
+```bash
+uv tool install dist/browser_use_mcp_server-*.whl
+```
+
+3. Run the tool from any directory:
+
+```bash
+# Set your OpenAI API key for the current session
+export OPENAI_API_KEY=your-api-key-here
+
+# Or provide it inline for a one-time run
+OPENAI_API_KEY=your-api-key-here browser-use-mcp-server run server --port 8000 --stdio --proxy-port 9000
+```
+
+4. After making changes, rebuild and reinstall:
+
+```bash
+uv build
+uv tool uninstall browser-use-mcp-server
+uv tool install dist/browser_use_mcp_server-*.whl
 ```
 
 ### Tools
@@ -114,13 +150,7 @@ server and mcp-proxy. The proxy handles the conversion between stdio and SSE
 protocols. No additional configuration is needed - just start your client and it
 will communicate with the server through stdin/stdout.
 
-Install the cli
-
-```bash
-uv pip install -e .
-```
-
-And then e.g., in Windsurf, paste:
+For Windsurf integration, add this to your config:
 
 ```json
 {
@@ -135,7 +165,10 @@ And then e.g., in Windsurf, paste:
         "--stdio",
         "--proxy-port",
         "9000"
-      ]
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key"
+      }
     }
   }
 }

@@ -25,6 +25,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "anyio",
     "python-dotenv",
+    "python-json-logger>=2.0.7",
     "starlette",
     "uvicorn",
     "playwright>=1.50.0",
@@ -72,7 +73,8 @@ disallow_incomplete_defs = true
 browser-use-mcp-server = "browser_use_mcp_server.cli:cli"
 
 [tool.hatch.build]
-packages = ["src/browser_use_mcp_server"]
+packages = ["src", "server"]
+include = ["server"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/browser_use_mcp_server"]
+packages = ["src/browser_use_mcp_server", "server"]
