@@ -165,7 +165,10 @@ For Windsurf integration, add this to your config:
         "--stdio",
         "--proxy-port",
         "9000"
-      ]
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key"
+      }
     }
   }
 }
