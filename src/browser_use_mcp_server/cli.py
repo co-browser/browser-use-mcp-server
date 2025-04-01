@@ -17,18 +17,19 @@ from pythonjsonlogger import jsonlogger
 logger = logging.getLogger()
 logger.handlers = []  # Remove any existing handlers
 handler = logging.StreamHandler(sys.stderr)
-formatter = jsonlogger.JsonFormatter('{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}')
+formatter = jsonlogger.JsonFormatter(
+    '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+
 def log_error(message: str, error: Exception = None):
     """Log error in JSON format to stderr"""
-    error_data = {
-        "error": message,
-        "traceback": str(error) if error else None
-    }
+    error_data = {"error": message, "traceback": str(error) if error else None}
     print(json.dumps(error_data), file=sys.stderr)
+
 
 def import_server_module():
     """
@@ -42,6 +43,7 @@ def import_server_module():
     try:
         # Try to import the server module
         import server.server
+
         return server.server
     except ImportError:
         # If running as an installed package, the server module might be elsewhere
