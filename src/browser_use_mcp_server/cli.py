@@ -7,9 +7,28 @@ It wraps the existing server functionality with a CLI.
 
 import os
 import sys
+import json
+import logging
 import click
 import importlib.util
+from pythonjsonlogger import jsonlogger
 
+# Configure logging for CLI
+logger = logging.getLogger()
+logger.handlers = []  # Remove any existing handlers
+handler = logging.StreamHandler(sys.stderr)
+formatter = jsonlogger.JsonFormatter('{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+def log_error(message: str, error: Exception = None):
+    """Log error in JSON format to stderr"""
+    error_data = {
+        "error": message,
+        "traceback": str(error) if error else None
+    }
+    print(json.dumps(error_data), file=sys.stderr)
 
 def import_server_module():
     """
@@ -23,7 +42,6 @@ def import_server_module():
     try:
         # Try to import the server module
         import server.server
-
         return server.server
     except ImportError:
         # If running as an installed package, the server module might be elsewhere
@@ -37,6 +55,7 @@ def import_server_module():
                 spec.loader.exec_module(server_module)
                 return server_module
         except Exception as e:
+            log_error("Could not import server module", e)
             raise ImportError(f"Could not import server module: {e}")
 
         raise ImportError(
@@ -87,9 +106,7 @@ def run(
     SUBCOMMAND: should be 'server'
     """
     if subcommand != "server":
-        click.echo(
-            f"Unknown subcommand: {subcommand}. Only 'server' is supported.", err=True
-        )
+        log_error(f"Unknown subcommand: {subcommand}. Only 'server' is supported.")
         sys.exit(1)
 
     try:
@@ -131,11 +148,7 @@ def run(
             sys.argv = old_argv
 
     except Exception as e:
-        import traceback
-
-        click.echo(f"Error starting server: {e}", err=True)
-        click.echo("Detailed error:", err=True)
-        click.echo(traceback.format_exc(), err=True)
+        log_error("Error starting server", e)
         sys.exit(1)
 
 
