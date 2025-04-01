@@ -43,7 +43,9 @@ from langchain_core.language_models import BaseLanguageModel
 logger = logging.getLogger()
 logger.handlers = []  # Remove any existing handlers
 handler = logging.StreamHandler(sys.stderr)
-formatter = jsonlogger.JsonFormatter('{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}')
+formatter = jsonlogger.JsonFormatter(
+    '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -869,7 +871,7 @@ def main(
             "formatters": {
                 "json": {
                     "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-                    "fmt": '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+                    "fmt": '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}',
                 }
             },
             "handlers": {
@@ -884,15 +886,15 @@ def main(
                 "uvicorn": {"handlers": ["default"], "level": "INFO"},
                 "uvicorn.error": {"handlers": ["default"], "level": "INFO"},
                 "uvicorn.access": {"handlers": ["default"], "level": "INFO"},
-            }
+            },
         }
-        
+
         uvicorn.run(
             starlette_app,
             host="0.0.0.0",
             port=port,
             log_config=log_config,
-            log_level="info"
+            log_level="info",
         )
 
     # If proxy mode is enabled, run both the SSE server and mcp-proxy
