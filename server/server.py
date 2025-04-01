@@ -19,10 +19,12 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
 import time
+import sys
 
 # Third-party imports
 import click
 from dotenv import load_dotenv
+from pythonjsonlogger import jsonlogger
 
 # Browser-use library imports
 from browser_use import Agent
@@ -38,8 +40,23 @@ from langchain_openai import ChatOpenAI
 from langchain_core.language_models import BaseLanguageModel
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.handlers = []  # Remove any existing handlers
+handler = logging.StreamHandler(sys.stderr)
+formatter = jsonlogger.JsonFormatter('{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Ensure uvicorn also logs to stderr in JSON format
+uvicorn_logger = logging.getLogger("uvicorn")
+uvicorn_logger.handlers = []
+uvicorn_logger.addHandler(handler)
+
+# Ensure all other loggers use the same format
+logging.getLogger("browser_use").addHandler(handler)
+logging.getLogger("playwright").addHandler(handler)
+logging.getLogger("mcp").addHandler(handler)
 
 # Load environment variables
 load_dotenv()
@@ -845,7 +862,38 @@ def main(
 
     # Function to run uvicorn in a separate thread
     def run_uvicorn():
-        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
+        # Configure uvicorn to use JSON logging
+        log_config = {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "json": {
+                    "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+                    "fmt": '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+                }
+            },
+            "handlers": {
+                "default": {
+                    "formatter": "json",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stderr",
+                }
+            },
+            "loggers": {
+                "": {"handlers": ["default"], "level": "INFO"},
+                "uvicorn": {"handlers": ["default"], "level": "INFO"},
+                "uvicorn.error": {"handlers": ["default"], "level": "INFO"},
+                "uvicorn.access": {"handlers": ["default"], "level": "INFO"},
+            }
+        }
+        
+        uvicorn.run(
+            starlette_app,
+            host="0.0.0.0",
+            port=port,
+            log_config=log_config,
+            log_level="info"
+        )
 
     # If proxy mode is enabled, run both the SSE server and mcp-proxy
     if stdio:
