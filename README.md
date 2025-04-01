@@ -150,12 +150,6 @@ server and mcp-proxy. The proxy handles the conversion between stdio and SSE
 protocols. No additional configuration is needed - just start your client and it
 will communicate with the server through stdin/stdout.
 
-Install the package in development mode:
-
-```bash
-uv pip install -e .
-```
-
 For Windsurf integration, add this to your config:
 
 ```json
