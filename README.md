@@ -83,7 +83,15 @@ browser-use-mcp-server run server --port 8000 --stdio --proxy-port 9000
   "mcpServers": {
     "browser-server": {
       "command": "browser-use-mcp-server",
-      "args": ["run", "server", "--port", "8000", "--stdio", "--proxy-port", "9000"],
+      "args": [
+        "run",
+        "server",
+        "--port",
+        "8000",
+        "--stdio",
+        "--proxy-port",
+        "9000"
+      ],
       "env": {
         "OPENAI_API_KEY": "your-api-key"
       }
