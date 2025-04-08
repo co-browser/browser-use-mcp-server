@@ -5,7 +5,8 @@
 [![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/cobrowser.svg?style=social&label=Follow%20%40cobrowser)](https://x.com/cobrowser)
 [![PyPI version](https://badge.fury.io/py/browser-use-mcp-server.svg)](https://pypi.org/project/browser-use-mcp-server/)
 
-**An MCP server that enables AI agents to control web browsers using [browser-use](https://github.com/browser-use/browser-use).**
+**An MCP server that enables AI agents to control web browsers using
+[browser-use](https://github.com/browser-use/browser-use).**
 
 </div>
 
@@ -24,6 +25,7 @@ uv tool install mcp-proxy
 ## Environment
 
 Create a `.env` file:
+
 ```
 OPENAI_API_KEY=your-api-key
 CHROME_PATH=optional/path/to/chrome
@@ -92,12 +94,12 @@ browser-use-mcp-server run server --stdio --proxy-port 9000
 
 ### Config Locations
 
-| Client | Configuration Path |
-|--------|-------------------|
-| Cursor | `./.cursor/mcp.json` |
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
-| Claude (Mac) | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Claude (Windows) | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Client           | Configuration Path                                                |
+| ---------------- | ----------------------------------------------------------------- |
+| Cursor           | `./.cursor/mcp.json`                                              |
+| Windsurf         | `~/.codeium/windsurf/mcp_config.json`                             |
+| Claude (Mac)     | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Claude (Windows) | `%APPDATA%\Claude\claude_desktop_config.json`                     |
 
 ## Features
 
@@ -111,18 +113,21 @@ browser-use-mcp-server run server --stdio --proxy-port 9000
 To develop and test the package locally:
 
 1. Build a distributable wheel:
+
    ```bash
    # From the project root directory
    uv build
    ```
 
 2. Install it as a global tool:
+
    ```bash
    uv tool uninstall browser-use-mcp-server 2>/dev/null || true
    uv tool install dist/browser_use_mcp_server-*.whl
    ```
 
 3. Run from any directory:
+
    ```bash
    # Set your OpenAI API key for the current session
    export OPENAI_API_KEY=your-api-key-here
