@@ -20,6 +20,7 @@
 # Install prerequisites
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install mcp-proxy
+uv tool update-shell
 ```
 
 ## Environment
