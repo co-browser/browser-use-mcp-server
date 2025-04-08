@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <4.0"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -143,6 +144,7 @@ dependencies = [
     { name = "playwright" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "python-json-logger" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
@@ -181,9 +183,11 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.1.0" },
     { name = "python-dotenv" },
+    { name = "python-json-logger", specifier = ">=2.0.7" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
+provides-extras = ["dev", "test"]
 
 [[package]]
 name = "certifi"
@@ -1032,6 +1036,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bc/57/e84d88dfe0aec03b7a2d4327012c1627ab5f03652216c63d49846d7a6c58/python-dotenv-1.0.1.tar.gz", hash = "sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca", size = 39115 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/3e/b68c118422ec867fa7ab88444e1274aa40681c606d59ac27de5a5588f082/python_dotenv-1.0.1-py3-none-any.whl", hash = "sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a", size = 19863 },
+]
+
+[[package]]
+name = "python-json-logger"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/de/d3144a0bceede957f961e975f3752760fbe390d57fbe194baf709d8f1f7b/python_json_logger-3.3.0.tar.gz", hash = "sha256:12b7e74b17775e7d565129296105bbe3910842d9d0eb083fc83a6a617aa8df84", size = 16642 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/20/0f2523b9e50a8052bc6a8b732dfc8568abbdc42010aef03a2d750bdab3b2/python_json_logger-3.3.0-py3-none-any.whl", hash = "sha256:dd980fae8cffb24c13caf6e158d3d61c0d6d22342f932cb6e9deedab3d35eec7", size = 15163 },
 ]
 
 [[package]]
