@@ -59,7 +59,7 @@ uv tool uninstall browser-use-mcp-server 2>/dev/null || true
 uv tool install dist/browser_use_mcp_server-*.whl
 
 # 2. Run with stdio transport
-browser-use-mcp-server run server --stdio --proxy-port 9000
+browser-use-mcp-server run server --port 8000 --stdio --proxy-port 9000
 ```
 
 ## Client Configuration
@@ -83,7 +83,7 @@ browser-use-mcp-server run server --stdio --proxy-port 9000
   "mcpServers": {
     "browser-server": {
       "command": "browser-use-mcp-server",
-      "args": ["run", "server", "--stdio", "--proxy-port", "9000"],
+      "args": ["run", "server", "--port", "8000", "--stdio", "--proxy-port", "9000"],
       "env": {
         "OPENAI_API_KEY": "your-api-key"
       }
