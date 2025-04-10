@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v5
@@ -30,18 +30,14 @@ jobs:
           python-version: "3.13"
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Install python packages
-        run: |
-          uv sync
-      - name: Build a binary wheel and a source tarball
-        run: |
-          uv build --sdist --wheel --out-dir dist
+      - name: Build
+        run: uv build
 
-      - name: Publish build artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pypi-dists
-          path: "./dist"
+          path: dist/
 
   pypi-publish:
     runs-on: ubuntu-latest
@@ -73,6 +69,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+
   github-release:
     name: >-
       Sign the Python 🐍 distribution 📦 with Sigstore and upload them to GitHub

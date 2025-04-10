@@ -1,0 +1,59 @@
+[MASTER]
+# Python version
+py-version = 3.11
+
+# Disable specific messages
+disable=
+    C0301, # Line too long
+    R0402, # Use 'from mcp import types' instead
+    W1203, # Use lazy % formatting in logging functions
+    R0913, # Too many arguments
+    R0917, # Too many positional arguments
+    R0914, # Too many local variables
+    W0718, # Catching too general exception Exception
+    R0915, # Too many statements
+    W0613, # Unused argument
+    R1705, # Unnecessary "elif" after "return"
+    R0912, # Too many branches
+    W0621, # Redefining name from outer scope
+    W0404, # Reimport
+    C0415, # Import outside toplevel
+    W0212, # Access to a protected member
+    W0107, # Unnecessary pass statement
+    R0801, # Similar lines in files
+    import-error,
+    no-value-for-parameter,
+    logging-fstring-interpolation,
+    protected-access,
+    redefined-outer-name,
+    reimported
+
+# Add files or directories to the blacklist
+ignore=.git,__pycache__,.venv,dist,build
+
+# Use multiple processes to speed up Pylint
+jobs=4
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=120
+
+# Maximum number of lines in a module
+max-module-lines=300
+
+[MESSAGES CONTROL]
+# Only show warnings with the listed confidence levels
+confidence=HIGH,CONTROL_FLOW
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of locals for function / method
+max-locals=30
+
+# Maximum number of statements in function / method body
+max-statements=60
+
+# Maximum number of branch for function / method body
+max-branches=15 

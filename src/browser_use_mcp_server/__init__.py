@@ -5,4 +5,4 @@ This package provides a Model-Control-Protocol (MCP) server for browser automati
 using the browser_use library.
 """
 
-__version__ = "0.1.3"
+__version__ = "0.0.0"

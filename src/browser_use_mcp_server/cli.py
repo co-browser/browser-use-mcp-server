@@ -5,13 +5,16 @@ This module provides a command-line interface for starting the browser-use MCP s
 It wraps the existing server functionality with a CLI.
 """
 
-import os
-import sys
 import json
 import logging
+import sys
+from typing import Optional
+
 import click
-import importlib.util
 from pythonjsonlogger import jsonlogger
+
+# Import directly from our package
+from browser_use_mcp_server.server import main as server_main
 
 # Configure logging for CLI
 logger = logging.getLogger()
@@ -25,50 +28,15 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
-def log_error(message: str, error: Exception = None):
+def log_error(message: str, error: Optional[Exception] = None):
     """Log error in JSON format to stderr"""
     error_data = {"error": message, "traceback": str(error) if error else None}
     print(json.dumps(error_data), file=sys.stderr)
 
 
-def import_server_module():
-    """
-    Import the server module from the server directory.
-    This allows us to reuse the existing server code.
-    """
-    # Add the root directory to the Python path to find server module
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    sys.path.insert(0, root_dir)
-
-    try:
-        # Try to import the server module
-        import server.server
-
-        return server.server
-    except ImportError:
-        # If running as an installed package, the server module might be elsewhere
-        try:
-            # Look in common locations
-            if os.path.exists(os.path.join(root_dir, "server", "server.py")):
-                spec = importlib.util.spec_from_file_location(
-                    "server.server", os.path.join(root_dir, "server", "server.py")
-                )
-                server_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(server_module)
-                return server_module
-        except Exception as e:
-            log_error("Could not import server module", e)
-            raise ImportError(f"Could not import server module: {e}")
-
-        raise ImportError(
-            "Could not find server module. Make sure it's installed correctly."
-        )
-
-
 @click.group()
 def cli():
     """Browser-use MCP server command line interface."""
-    pass
 
 
 @cli.command()
@@ -112,9 +80,6 @@ def run(
         sys.exit(1)
 
     try:
-        # Import the server module
-        server_module = import_server_module()
-
         # We need to construct the command line arguments to pass to the server's Click command
         old_argv = sys.argv.copy()
 
@@ -144,7 +109,7 @@ def run(
 
         # Run the server's command directly
         try:
-            return server_module.main()
+            return server_main()
         finally:
             # Restore original sys.argv
             sys.argv = old_argv

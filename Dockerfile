@@ -7,7 +7,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 # Install build dependencies and clean up in the same layer
 RUN apt-get update -y && \
-    apt-get install --no-install-recommends -y clang && \
+    apt-get install --no-install-recommends -y clang git && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python before the project for caching

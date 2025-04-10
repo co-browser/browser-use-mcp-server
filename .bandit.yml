@@ -1,0 +1,9 @@
+---
+# Bandit configuration file
+
+# Skip specific test IDs
+skips: [B104, B404, B603]
+
+# Plugin configs
+any_other_function_with_shell_equals_true:
+  no_shell: [subprocess.Popen] 

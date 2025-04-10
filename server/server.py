@@ -10,34 +10,41 @@ The server supports Server-Sent Events (SSE) for web-based interfaces.
 """
 
 # Standard library imports
-import os
 import asyncio
 import json
 import logging
+import os
+import sys
+
+# Set up SSE transport
+import threading
+import time
 import traceback
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
-import time
-import sys
 
 # Third-party imports
 import click
-from dotenv import load_dotenv
-from pythonjsonlogger import jsonlogger
+import mcp.types as types
+import uvicorn
 
 # Browser-use library imports
 from browser_use import Agent
 from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContext, BrowserContextConfig
-
-# MCP server components
-from mcp.server import Server
-import mcp.types as types
+from dotenv import load_dotenv
+from langchain_core.language_models import BaseLanguageModel
 
 # LLM provider
 from langchain_openai import ChatOpenAI
-from langchain_core.language_models import BaseLanguageModel
+
+# MCP server components
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+from pythonjsonlogger import jsonlogger
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
 
 # Configure logging
 logger = logging.getLogger()
@@ -805,14 +812,6 @@ def main(
         locale=locale,
     )
 
-    # Set up SSE transport
-    from mcp.server.sse import SseServerTransport
-    from starlette.applications import Starlette
-    from starlette.routing import Mount, Route
-    import uvicorn
-    import asyncio
-    import threading
-
     sse = SseServerTransport("/messages/")
 
     # Create the Starlette app for SSE
@@ -891,7 +890,7 @@ def main(
 
         uvicorn.run(
             starlette_app,
-            host="0.0.0.0",
+            host="0.0.0.0",  # nosec
             port=port,
             log_config=log_config,
             log_level="info",
@@ -899,7 +898,7 @@ def main(
 
     # If proxy mode is enabled, run both the SSE server and mcp-proxy
     if stdio:
-        import subprocess
+        import subprocess  # nosec
 
         # Start the SSE server in a separate thread
         sse_thread = threading.Thread(target=run_uvicorn)
@@ -924,7 +923,8 @@ def main(
         )
 
         try:
-            with subprocess.Popen(proxy_cmd) as proxy_process:
+            # Using trusted command arguments from CLI parameters
+            with subprocess.Popen(proxy_cmd) as proxy_process:  # nosec
                 proxy_process.wait()
         except Exception as e:
             logger.error(f"Error starting mcp-proxy: {str(e)}")

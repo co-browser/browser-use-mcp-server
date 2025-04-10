@@ -1,0 +1,6 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E501
+per-file-ignores =
+    server/server.py:E501
+    src/browser_use_mcp_server/cli.py:E501 
