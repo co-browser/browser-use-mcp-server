@@ -59,7 +59,7 @@ RUN chmod -R 755 /python /app
 
 ENV PATH="/app/.venv/bin:$PATH" \
     DISPLAY=:0 \
-    CHROME_BIN=/usr/bin/chromium \
+    CHROME_BIN=/root/.cache/ms-playwright/chromium-1155/chrome-linux/chrome \
     CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
 
 # Combine VNC setup commands to reduce layers
