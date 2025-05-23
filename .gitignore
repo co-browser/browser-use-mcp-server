@@ -4,3 +4,7 @@
 .env
 *.egg-info
 dist
+node_modules
+.cursor
+megalinter-reports
+.DS_Store
