@@ -45,6 +45,60 @@ uv pip install playwright
 uv run playwright install --with-deps --no-shell chromium
 ```
 
+## LLM Providers
+
+The server can use **either** the public OpenAI platform **or** your own
+Azure OpenAI resource.  
+
+| Provider | How to enable | Required variables |
+|----------|---------------|--------------------|
+| OpenAI (default) | set `OPENAI_PROVIDER=openai` | `OPENAI_API_KEY` |
+| Azure OpenAI | set `OPENAI_PROVIDER=azure` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT` |
+
+### 1 · Environment variables (`.env`)
+
+```bash
+# --- choose ONE of the following ---
+
+# A. Public OpenAI
+OPENAI_PROVIDER=openai
+OPENAI_API_KEY=your-openai-api-key
+
+# B. Azure OpenAI
+OPENAI_PROVIDER=azure
+AZURE_OPENAI_KEY=your-azure-openai-api-key
+AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT=your-azure-oai-deployment-such-asgpt-4o
+AZURE_OPENAI_API_VERSION=2024-02-01       #optional, default shown
+```
+
+> The server first looks for `AZURE_OPENAI_KEY` and falls back to
+> `OPENAI_API_KEY`, so you may keep one variable if you use the same key for
+> both resources.
+
+### 2 · CLI overrides
+
+```bash
+uv python server/server.py \
+    --azure-endpoint https://my-resource.openai.azure.com \
+    --azure-deployment gpt-4o \
+    --azure-api-version 2024-02-01
+```
+
+Flags override `.env` values, enabling one-off tests without editing files.
+
+---
+
+## Dependencies
+
+Make sure you are on *at least* these versions:
+
+```
+langchain>=0.2.0
+langchain-openai>=0.1.6
+openai>=1.23.0
+```
+
 ## Usage
 
 ### SSE Mode
