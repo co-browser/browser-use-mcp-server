@@ -126,6 +126,10 @@ def init_configuration() -> Dict[str, Any]:
         ],
         # Patient mode - if true, functions wait for task completion before returning
         "PATIENT_MODE": parse_bool_env("PATIENT", False),
+        "OPENAI_PROVIDER": os.environ.get("OPENAI_PROVIDER", "openai").lower(),
+        "AZURE_OPENAI_ENDPOINT": os.environ.get("AZURE_OPENAI_ENDPOINT"),
+        "AZURE_OPENAI_DEPLOYMENT": os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
+        "AZURE_OPENAI_API_VERSION": os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01"),
     }
 
     return config
@@ -758,6 +762,21 @@ def create_mcp_server(
     default=False,
     help="Enable stdio mode. If specified, enables proxy mode.",
 )
+@click.option(
+    "--azure-endpoint",
+    default=None,
+    help="Azure OpenAI resource endpoint, e.g. https://myres.openai.azure.com",
+)
+@click.option(
+    "--azure-deployment",
+    default=None,
+    help="Deployed model name inside the Azure resource",
+)
+@click.option(
+    "--azure-api-version",
+    default=None,
+    help="Azure OpenAI API version (defaults to 2024-02-01)",
+)
 def main(
     port: int,
     proxy_port: Optional[int],
@@ -767,6 +786,9 @@ def main(
     locale: str,
     task_expiry_minutes: int,
     stdio: bool,
+    azure_endpoint: Optional[str] = None,
+    azure_deployment: Optional[str] = None,
+    azure_api_version: Optional[str] = None,
 ) -> int:
     """
     Run the browser-use MCP server.
@@ -801,7 +823,43 @@ def main(
         )
 
     # Initialize LLM
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+    if CONFIG["OPENAI_PROVIDER"] == "azure":
+        # Allow CLI to override .env
+        if azure_endpoint:
+            CONFIG["AZURE_OPENAI_ENDPOINT"] = azure_endpoint
+        if azure_deployment:
+            CONFIG["AZURE_OPENAI_DEPLOYMENT"] = azure_deployment
+        if azure_api_version:
+            CONFIG["AZURE_OPENAI_API_VERSION"] = azure_api_version
+
+        required = [
+            CONFIG["AZURE_OPENAI_ENDPOINT"],
+            CONFIG["AZURE_OPENAI_DEPLOYMENT"],
+            os.getenv("AZURE_OPENAI_KEY") or os.getenv("OPENAI_API_KEY"),
+        ]
+        if not all(required):
+            raise RuntimeError(
+                "OPENAI_PROVIDER=azure but one of the required environment variables "
+                "(AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT, AZURE_OPENAI_KEY) "
+                "is missing."
+            )
+
+        llm = ChatOpenAI(
+            model=CONFIG["AZURE_OPENAI_DEPLOYMENT"],
+            temperature=0.0,
+            azure_endpoint=CONFIG["AZURE_OPENAI_ENDPOINT"],
+            azure_deployment=CONFIG["AZURE_OPENAI_DEPLOYMENT"],
+            api_version=CONFIG["AZURE_OPENAI_API_VERSION"],
+            api_key=os.getenv("AZURE_OPENAI_KEY") or os.getenv("OPENAI_API_KEY"),
+        )
+        logger.info(
+            "Using Azure OpenAI provider "
+            f"({CONFIG['AZURE_OPENAI_ENDPOINT']} | deployment={CONFIG['AZURE_OPENAI_DEPLOYMENT']})"
+        )
+    else:
+        # Default public OpenAI
+        llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+        logger.info("Using public OpenAI provider")
 
     # Create MCP server
     app = create_mcp_server(
